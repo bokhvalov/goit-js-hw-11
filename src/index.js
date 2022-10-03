@@ -53,7 +53,7 @@ async function onSubmitForm(event) {
 }
 
 function onClickMore() {
-  if (page >= lastPage) {
+  if (page > lastPage) {
     hideMoreBtn();
     Notify.failure(
       "We're sorry, but you've reached the end of search results."
