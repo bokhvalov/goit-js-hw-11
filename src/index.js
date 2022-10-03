@@ -3,6 +3,11 @@ import { getImages } from './axiosFetch';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
+const lightbox = new SimpleLightbox('.gallery a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
+
 const refs = {
   searchForm: document.querySelector('.search-form'),
   inputField: document.querySelector("input[type='text']"),
@@ -10,53 +15,53 @@ const refs = {
   gallery: document.querySelector('.gallery'),
 };
 
-let currentImage = '';
+let currentImage;
+let page = 1;
+let lastPage;
+
 refs.searchForm.addEventListener('submit', onSubmitForm);
+refs.loadMoreBtn.addEventListener('click', onClickMore);
 
 async function onSubmitForm(event) {
   event.preventDefault();
-  let page = 1;
+
   const imageToSearch = refs.inputField.value;
   if (imageToSearch === currentImage) {
     return;
   }
-
-  currentImage = imageToSearch;
-
+  
   clearGallery();
   hideMoreBtn();
-
+  page = 1;
+  
   const images = await getImages(imageToSearch, page);
-  page += 1;
   const totalHits = images.totalHits;
+  lastPage = Math.ceil(images.totalHits / 40);
+  lastPage > 1 && showMoreBtn();
+  currentImage = imageToSearch;
+
+  page += 1;
 
   if (+totalHits > 0) {
     Notify.success(`Hooray! We found ${totalHits} images.`);
     renderMarkup(images);
-    const lastPage = Math.ceil(images.totalHits / 40);
-
-    lastPage > 1 && showMoreBtn();
-
-    refs.loadMoreBtn.addEventListener('click', () => {
-      if (page <= lastPage) {
-        getImages(imageToSearch, page)
-          .then(images => renderMarkup(images))
-          .then(() => (page += 1));
-      } else {
-        Notify.failure(
-          "We're sorry, but you've reached the end of search results."
-        );
-      }
-    });
-
-    new SimpleLightbox('.gallery a', {
-      captionsData: 'alt',
-      captionDelay: 250,
-    });
   } else {
     Notify.failure(
       'Sorry, there are no images matching your search query. Please try again'
     );
+  }
+}
+
+function onClickMore() {
+  if (page >= lastPage) {
+    hideMoreBtn();
+    Notify.failure(
+      "We're sorry, but you've reached the end of search results."
+    );
+  } else {
+    getImages(currentImage, page)
+    .then(images => renderMarkup(images))
+    page+=1;
   }
 }
 
@@ -98,6 +103,7 @@ function renderMarkup({ hits }) {
       refs.gallery.insertAdjacentHTML('beforeend', markup);
     }
   );
+  lightbox.refresh();
 }
 function clearGallery() {
   refs.gallery.innerHTML = '';
